@@ -1,0 +1,11 @@
+[
+  {
+    "productId": "test-123",
+    "name": "Test Product",
+    "price": 99.99,
+    "quantity": 2,
+    "imageUrl": "https://via.placeholder.com/150",
+    "sellerId": "seller-456",
+    "sellerName": "Test Seller"
+  }
+]

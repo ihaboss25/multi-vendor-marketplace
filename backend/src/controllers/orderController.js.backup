@@ -1,0 +1,259 @@
+const Order = require('../models/Order');
+const Product = require('../models/Product');
+
+// Create order (checkout)
+exports.createOrder = async (req, res) => {
+    try {
+        const { items } = req.body; // items: [{productId, quantity}]
+        
+        // Validation
+        if (!items || !Array.isArray(items) || items.length === 0) {
+            return res.status(400).json({
+                success: false,
+                error: 'Cart is empty'
+            });
+        }
+
+        let totalAmount = 0;
+        const orderItems = [];
+        const stockUpdates = [];
+
+        // Process each item
+        for (const item of items) {
+            const product = await Product.findById(item.productId);
+            
+            if (!product) {
+                return res.status(404).json({
+                    success: false,
+                    error: `Product ${item.productId} not found`
+                });
+            }
+            
+            if (product.stock < item.quantity) {
+                return res.status(400).json({
+                    success: false,
+                    error: `Insufficient stock for ${product.name}. Available: ${product.stock}`
+                });
+            }
+
+            // Calculate item total
+            const itemTotal = product.price * item.quantity;
+            totalAmount += itemTotal;
+
+            // Add to order items
+            orderItems.push({
+                product: product._id,
+                quantity: item.quantity,
+                price: product.price,
+                seller: product.seller
+            });
+
+            // Prepare stock update
+            stockUpdates.push({
+                productId: product._id,
+                newStock: product.stock - item.quantity
+            });
+        }
+
+        // Create order
+        const order = new Order({
+            buyer: req.userId,
+            items: orderItems,
+            totalAmount,
+            status: 'completed' // For MVP, skip payment simulation
+        });
+
+        await order.save();
+
+        // Update product stocks
+        for (const update of stockUpdates) {
+            await Product.findByIdAndUpdate(
+                update.productId,
+                { stock: update.newStock }
+            );
+        }
+
+        res.status(201).json({
+            success: true,
+            message: 'Order created successfully!',
+            order: {
+                id: order._id,
+                totalAmount: order.totalAmount,
+                itemsCount: order.items.length,
+                status: order.status,
+                createdAt: order.createdAt
+            }
+        });
+
+    } catch (error) {
+        console.error('Order creation error:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Error creating order'
+        });
+    }
+};
+
+// Get buyer's orders
+exports.getMyOrders = async (req, res) => {
+    try {
+        const orders = await Order.find({ buyer: req.userId })
+            .populate('items.product', 'name imageUrl')
+            .sort({ createdAt: -1 });
+
+        res.json({
+            success: true,
+            count: orders.length,
+            orders
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: 'Error fetching orders'
+        });
+    }
+};
+
+// Get seller's orders (orders containing seller's products)
+exports.getSellerOrders = async (req, res) => {
+    try {
+        const orders = await Order.find({ 'items.seller': req.userId })
+            .populate('buyer', 'name email')
+            .populate('items.product', 'name price')
+            .sort({ createdAt: -1 });
+
+        // Calculate seller's total from each order
+        const sellerOrders = orders.map(order => {
+            const sellerItems = order.items.filter(item => 
+                item.seller.toString() === req.userId.toString()
+            );
+            
+            const sellerTotal = sellerItems.reduce((sum, item) => 
+                sum + (item.price * item.quantity), 0
+            );
+
+            return {
+                orderId: order._id,
+                buyer: order.buyer,
+                items: sellerItems,
+                totalAmount: sellerTotal,
+                status: order.status,
+                createdAt: order.createdAt
+            };
+        });
+
+        res.json({
+            success: true,
+            count: sellerOrders.length,
+            orders: sellerOrders
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: 'Error fetching seller orders'
+        });
+    }
+};
+
+// Get order by ID
+exports.getOrderById = async (req, res) => {
+    try {
+        const order = await Order.findById(req.params.id)
+            .populate('buyer', 'name email')
+            .populate('items.product', 'name price imageUrl')
+            .populate('items.seller', 'name email');
+
+        if (!order) {
+            return res.status(404).json({
+                success: false,
+                error: 'Order not found'
+            });
+        }
+
+        // Check if user is authorized (buyer or seller in order)
+        const isBuyer = order.buyer._id.toString() === req.userId.toString();
+        const isSeller = order.items.some(item => 
+            item.seller._id.toString() === req.userId.toString()
+        );
+
+        if (!isBuyer && !isSeller && req.userRole !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                error: 'Not authorized to view this order'
+            });
+        }
+
+        res.json({
+            success: true,
+            order
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: 'Error fetching order'
+        });
+    }
+};
+
+// Simple cart simulation (for MVP)
+exports.addToCart = async (req, res) => {
+    try {
+        const { productId, quantity = 1 } = req.body;
+        
+        const product = await Product.findById(productId);
+        
+        if (!product) {
+            return res.status(404).json({
+                success: false,
+                error: 'Product not found'
+            });
+        }
+
+        res.json({
+            success: true,
+            message: 'Product added to cart (simulated)',
+            cartItem: {
+                productId: product._id,
+                name: product.name,
+                price: product.price,
+                quantity,
+                seller: product.seller,
+                imageUrl: product.imageUrl,
+                itemTotal: product.price * quantity
+            },
+            note: 'In MVP, cart is simulated. In production, use database cart.'
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: 'Error adding to cart'
+        });
+    }
+};
+
+// Get cart summary (simulated)
+exports.getCart = async (req, res) => {
+    try {
+        // For MVP, return empty cart
+        // In production, retrieve from database or session
+        res.json({
+            success: true,
+            cart: {
+                items: [],
+                total: 0,
+                itemCount: 0
+            },
+            note: 'Cart simulation for MVP'
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: 'Error fetching cart'
+        });
+    }
+};

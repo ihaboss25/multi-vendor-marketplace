@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<body>
+<h2>CORS Test</h2>
+<button onclick="testPreflight()">Test OPTIONS (Preflight)</button>
+<button onclick="testSimpleGet()">Test Simple GET</button>
+<div id="result"></div>
+
+<script>
+async function testPreflight() {
+  try {
+    const response = await fetch('http://localhost:5000/api/auth/register', {
+      method: 'OPTIONS',
+      headers: {
+        'Content-Type': 'application/json',
+        'Origin': 'http://localhost:3000'
+      }
+    });
+    document.getElementById('result').innerHTML = 
+      `OPTIONS Response: ${response.status}<br>Headers: ${JSON.stringify([...response.headers.entries()])}`;
+  } catch (e) {
+    document.getElementById('result').innerHTML = `OPTIONS Error: ${e.message}`;
+  }
+}
+
+async function testSimpleGet() {
+  try {
+    const response = await fetch('http://localhost:5000/');
+    const data = await response.json();
+    document.getElementById('result').innerHTML = 
+      `GET Response: ${JSON.stringify(data, null, 2)}`;
+  } catch (e) {
+    document.getElementById('result').innerHTML = `GET Error: ${e.message}`;
+  }
+}
+</script>
+</body>
+</html>
