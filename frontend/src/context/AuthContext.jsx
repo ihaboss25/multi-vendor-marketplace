@@ -25,7 +25,7 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password) => {
     try {
       const response = await authService.login({ email, password });
-      const { token, user } = response.data;
+      const { token, user } = response;
       
       localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(user));
@@ -43,7 +43,7 @@ export const AuthProvider = ({ children }) => {
   const register = async (userData) => {
     try {
       const response = await authService.register(userData);
-      const { token, user } = response.data;
+      const { token, user } = response;
       
       localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(user));

@@ -1,11 +1,5 @@
 {
-  "rewrites": [
-    {
-      "source": "/api/(.*)",
-      "destination": "https://your-backend-url.onrender.com/api/$1"
-    }
-  ],
   "env": {
-    "REACT_APP_API_URL": "https://your-backend-url.onrender.com"
+    "REACT_APP_API_URL": "https://marketplace-backend-little-pond-6128.fly.dev"
   }
 }
