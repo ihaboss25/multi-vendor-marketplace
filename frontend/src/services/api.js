@@ -25,10 +25,10 @@ export const productService = {
     return response.json();
   },
 
-  // NOUVELLES MÉTHODES AJOUTÉES :
+  // CORRIGÉ : /seller/my-products
   getMyProducts: async () => {
     const token = localStorage.getItem('token');
-    const response = await fetch(`${API_URL}/api/products/my-products`, {
+    const response = await fetch(`${API_URL}/api/products/seller/my-products`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     return response.json();
