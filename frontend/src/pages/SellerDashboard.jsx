@@ -30,10 +30,10 @@ const SellerDashboard = () => {
       setLoading(true);
       console.log('Fetching products from API...');
       const response = await productService.getMyProducts();
-      console.log('Products response:', response.data);
+      console.log('Products response:', response);
       
-      // La réponse peut être response.data.products ou response.data
-      const productsData = response.data.products || response.data || [];
+      // Response is {success, count, products}
+      const productsData = response.products || [];
       setProducts(Array.isArray(productsData) ? productsData : []);
       setError('');
     } catch (err) {
@@ -87,10 +87,10 @@ const SellerDashboard = () => {
         imageUrl: 'https://via.placeholder.com/300x200?text=Product+Image'
       });
       
-      fetchProducts(); // Rafraîchir la liste
+      fetchProducts(); // Refresh list
     } catch (err) {
       console.error('Error saving product:', err);
-      setError(err.response?.data?.error || 'Failed to save product. Please try again.');
+      setError(err.message || 'Failed to save product. Please try again.');
     } finally {
       setFormLoading(false);
     }
