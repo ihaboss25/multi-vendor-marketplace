@@ -4,7 +4,7 @@ const productController = require('../controllers/productController');
 const { auth, checkRole } = require('../middleware/auth');
 const upload = require('../middleware/upload');
 
-// Créer un produit (upload d'image)
+// Create a product (image upload)
 router.post('/', 
   auth, 
   checkRole(['seller', 'admin']), 
@@ -12,16 +12,19 @@ router.post('/',
   productController.createProduct
 );
 
-// Récupérer tous les produits
+// Get all products
 router.get('/', productController.getAllProducts);
 
-// Récupérer un produit par ID
+// Get products for logged-in seller - CORRIGÉ
+router.get('/seller/my-products', auth, checkRole(['seller', 'admin']), productController.getMyProducts);
+
+// Get product by ID
 router.get('/:id', productController.getProductById);
 
-// Mettre à jour un produit
+// Update a product
 router.put('/:id', auth, checkRole(['seller', 'admin']), productController.updateProduct);
 
-// Supprimer un produit
+// Delete a product
 router.delete('/:id', auth, checkRole(['seller', 'admin']), productController.deleteProduct);
 
 module.exports = router;
