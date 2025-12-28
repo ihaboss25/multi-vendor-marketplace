@@ -23,6 +23,50 @@ export const productService = {
   getAll: async () => {
     const response = await fetch(`${API_URL}/api/products`);
     return response.json();
+  },
+
+  // NOUVELLES MÉTHODES AJOUTÉES :
+  getMyProducts: async () => {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${API_URL}/api/products/my-products`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    return response.json();
+  },
+
+  create: async (productData) => {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${API_URL}/api/products`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(productData)
+    });
+    return response.json();
+  },
+
+  update: async (id, productData) => {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${API_URL}/api/products/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(productData)
+    });
+    return response.json();
+  },
+
+  delete: async (id) => {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${API_URL}/api/products/${id}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    return response.json();
   }
 };
 
