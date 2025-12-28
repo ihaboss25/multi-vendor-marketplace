@@ -5,11 +5,35 @@ require('dotenv').config();
 
 const app = express();
 
-// Middleware
+// CORS configuration
+const allowedOrigins = [
+  'https://multi-vendor-marketplace-delta.vercel.app',
+  'https://multi-vendor-marketplace-*.vercel.app',
+  'http://localhost:3000'
+];
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: function (origin, callback) {
+    // Allow requests with no origin (mobile apps, curl, etc.)
+    if (!origin) return callback(null, true);
+    
+    // Check if origin matches allowed patterns
+    if (allowedOrigins.some(pattern => {
+      if (pattern.includes('*')) {
+        const regex = new RegExp(pattern.replace('*', '.*'));
+        return regex.test(origin);
+      }
+      return pattern === origin;
+    })) {
+      return callback(null, true);
+    }
+    
+    callback(new Error('Not allowed by CORS'));
+  },
   credentials: true
 }));
+
+// Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
