@@ -8,12 +8,13 @@ const Cart = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
+  const [orderId, setOrderId] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('credit_card');
   const [shippingAddress, setShippingAddress] = useState('');
   const [checkoutProcessing, setCheckoutProcessing] = useState(false);
   const navigate = useNavigate();
 
-  // Charger le panier depuis localStorage au démarrage - VERSION CORRIGÉE
+  // Load cart from localStorage on startup - FIXED VERSION
   useEffect(() => {
     const savedCart = localStorage.getItem('cart');
     console.log('DEBUG savedCart:', savedCart);
@@ -31,7 +32,7 @@ const Cart = () => {
     }
   }, []);
 
-  // Sauvegarder le panier dans localStorage quand il change
+  // Save cart to localStorage when it changes
   useEffect(() => {
     localStorage.setItem('cart', JSON.stringify(cartItems));
   }, [cartItems]);
@@ -88,41 +89,54 @@ const Cart = () => {
       return;
     }
 
+    // Check if user is logged in
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setError('You must be logged in to checkout');
+      navigate('/login');
+      return;
+    }
+
     setCheckoutProcessing(true);
     setError('');
 
     try {
-      // 1. Créer la commande
-      const orderResponse = await orderService.checkout({
-        items: cartItems.map(item => ({
-          productId: item.productId,
-          quantity: item.quantity
-        })),
-        shippingAddress
-      });
+      // 1. Create order
+console.log('Checkout items:', cartItems);
+const orderResponse = await orderService.checkout({
+  items: cartItems.map(item => ({
+    productId: item.productId,
+    quantity: item.quantity
+  })),
+  shippingAddress
+});
 
-      const orderId = orderResponse.data.orderId || orderResponse.data.order._id;
+console.log('✅ Order response:', orderResponse);
 
-      // 2. Traiter le paiement
+// orderResponse is the direct JSON object, not {data: ...}
+const createdOrderId = orderResponse.orderId || orderResponse.order?._id;
+console.log('✅ Order ID:', createdOrderId);
+setOrderId(createdOrderId);
+
+console.log('✅ Setting modal to true');
+
+      // 2. Process payment
       const paymentResponse = await orderService.processPayment({
-        orderId,
-        paymentMethod
+        orderId: createdOrderId,
+        paymentMethod,
+        amount: total
       });
 
-      // 3. Vider le panier
+      // Clear cart
       localStorage.removeItem('cart');
       setCartItems([]);
 
-      // 4. Rediriger vers la page de confirmation
-      navigate('/orders', { 
-        state: { 
-          message: 'Order placed successfully!',
-          orderId: paymentResponse.data.transactionId 
-        }
-      });
-
+      // Show success modal
+      setShowCheckoutModal(true);
+      
     } catch (err) {
-      setError(err.response?.data?.error || 'Checkout failed. Please try again.');
+      console.error('Checkout error:', err);
+      setError(err.message || 'Checkout failed. Please try again.');
     } finally {
       setCheckoutProcessing(false);
     }
@@ -135,9 +149,9 @@ const Cart = () => {
       {cartItems.length === 0 ? (
         <Card className="text-center py-5">
           <Card.Body>
-            <div className="fs-1 mb-3">🛍️</div>
+            <h2>🛍️</h2>
             <Card.Title>Your cart is empty</Card.Title>
-            <Card.Text className="mb-4">
+            <Card.Text>
               Add some amazing products to your cart!
             </Card.Text>
             <Button as={Link} to="/products" variant="primary">
@@ -172,14 +186,17 @@ const Cart = () => {
                           <td>
                             <div className="d-flex align-items-center">
                               <img 
-                                src={item.imageUrl} 
+                                src={item.imageUrl || 'https://via.placeholder.com/50'} 
                                 alt={item.name}
-                                style={{ width: '50px', height: '50px', objectFit: 'cover', marginRight: '15px' }}
+                                style={{ width: '50px', height: '50px', objectFit: 'cover', marginRight: '10px' }}
+                                onError={(e) => {
+                                  e.target.src = 'https://via.placeholder.com/50';
+                                }}
                               />
                               <div>
                                 <strong>{item.name}</strong>
                                 <div className="text-muted small">
-                                  Seller: {item.sellerName}
+                                  Seller: {item.sellerName || item.seller}
                                 </div>
                               </div>
                             </div>
@@ -194,14 +211,7 @@ const Cart = () => {
                               >
                                 -
                               </Button>
-                              <Form.Control
-                                type="number"
-                                min="1"
-                                max={item.maxStock}
-                                value={item.quantity}
-                                onChange={(e) => updateQuantity(item.productId, parseInt(e.target.value) || 1)}
-                                style={{ width: '70px', margin: '0 10px', textAlign: 'center' }}
-                              />
+                              <span className="mx-2">{item.quantity}</span>
                               <Button 
                                 variant="outline-secondary" 
                                 size="sm"
@@ -211,9 +221,7 @@ const Cart = () => {
                               </Button>
                             </div>
                           </td>
-                          <td>
-                            <strong>${(item.price * item.quantity).toFixed(2)}</strong>
-                          </td>
+                          <td>${(item.price * item.quantity).toFixed(2)}</td>
                           <td>
                             <Button 
                               variant="outline-danger" 
@@ -229,46 +237,31 @@ const Cart = () => {
                   </Table>
                 </Card.Body>
               </Card>
-
-              <div className="d-flex justify-content-between mb-4">
-                <Button as={Link} to="/products" variant="outline-primary">
-                  ← Continue Shopping
-                </Button>
-                <Button 
-                  variant="outline-danger"
-                  onClick={() => {
-                    if (window.confirm('Clear your entire cart?')) {
-                      localStorage.removeItem('cart');
-                      setCartItems([]);
-                    }
-                  }}
-                >
-                  Clear Cart
-                </Button>
-              </div>
             </Col>
 
             <Col lg={4}>
-              <Card className="sticky-top" style={{ top: '20px' }}>
+              <Card className="sticky-top">
                 <Card.Body>
                   <Card.Title>Order Summary</Card.Title>
                   
-                  <div className="d-flex justify-content-between mb-2">
-                    <span>Subtotal:</span>
-                    <span>${subtotal.toFixed(2)}</span>
-                  </div>
-                  <div className="d-flex justify-content-between mb-2">
-                    <span>Shipping:</span>
-                    <span>${shippingFee.toFixed(2)}</span>
-                  </div>
-                  <div className="d-flex justify-content-between mb-2">
-                    <span>Tax (8%):</span>
-                    <span>${tax.toFixed(2)}</span>
-                  </div>
-                  <hr />
-                  <div className="d-flex justify-content-between mb-3">
-                    <strong>Total:</strong>
-                    <strong>${total.toFixed(2)}</strong>
+                  <div className="mb-3">
+                    <div className="d-flex justify-content-between">
+                      <span>Subtotal:</span>
+                      <span>${subtotal.toFixed(2)}</span>
+                    </div>
+                    <div className="d-flex justify-content-between">
+                      <span>Shipping:</span>
+                      <span>${shippingFee.toFixed(2)}</span>
+                    </div>
+                    <div className="d-flex justify-content-between">
+                      <span>Tax ({taxRate * 100}%):</span>
+                      <span>${tax.toFixed(2)}</span>
+                    </div>
+                    <hr />
+                    <div className="d-flex justify-content-between fw-bold">
+                      <span>Total:</span>
+                      <span className="text-primary">${total.toFixed(2)}</span>
+                    </div>
                   </div>
 
                   <Form.Group className="mb-3">
@@ -290,7 +283,6 @@ const Cart = () => {
                     >
                       <option value="credit_card">Credit Card</option>
                       <option value="paypal">PayPal</option>
-                      <option value="mock">Mock Payment (Test)</option>
                     </Form.Select>
                   </Form.Group>
 
@@ -326,7 +318,7 @@ const Cart = () => {
             <Modal.Body>
               Your order has been placed successfully!
               <br />
-              Order ID: <strong>ORD-{Date.now()}</strong>
+              Order ID: <strong>{orderId}</strong>
             </Modal.Body>
             <Modal.Footer>
               <Button variant="secondary" onClick={() => setShowCheckoutModal(false)}>
