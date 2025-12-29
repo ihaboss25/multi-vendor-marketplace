@@ -1,7 +1,7 @@
 const Order = require('../models/Order');
 const Product = require('../models/Product');
 
-// Créer une commande (checkout)
+// Create order (checkout)
 exports.createOrder = async (req, res) => {
   try {
     const { items, shippingAddress } = req.body;
@@ -14,7 +14,7 @@ exports.createOrder = async (req, res) => {
       });
     }
 
-    // Vérifier les produits et calculer le total
+    // Validate products and calculate total
     let totalAmount = 0;
     const orderItems = [];
 
@@ -35,7 +35,7 @@ exports.createOrder = async (req, res) => {
         });
       }
 
-      // Réduire le stock
+      // Reduce stock
       product.stock -= item.quantity;
       await product.save();
 
@@ -49,7 +49,7 @@ exports.createOrder = async (req, res) => {
       totalAmount += product.price * item.quantity;
     }
 
-    // Créer la commande
+    // Create order
     const order = new Order({
       buyer: buyerId,
       items: orderItems,
@@ -60,7 +60,7 @@ exports.createOrder = async (req, res) => {
 
     await order.save();
 
-    // Peupler les données pour la réponse
+    // Populate data for response
     const populatedOrder = await Order.findById(order._id)
       .populate('buyer', 'name email')
       .populate('items.product', 'name imageUrl')
@@ -82,7 +82,7 @@ exports.createOrder = async (req, res) => {
   }
 };
 
-// Obtenir les commandes de l'acheteur
+// Get buyer orders
 exports.getBuyerOrders = async (req, res) => {
   try {
     const orders = await Order.find({ buyer: req.userId })
@@ -102,7 +102,7 @@ exports.getBuyerOrders = async (req, res) => {
   }
 };
 
-// Obtenir les commandes du vendeur
+// Get seller orders
 exports.getSellerOrders = async (req, res) => {
   try {
     const orders = await Order.find({ 'items.seller': req.userId })
@@ -122,7 +122,7 @@ exports.getSellerOrders = async (req, res) => {
   }
 };
 
-// Mettre à jour le statut d'une commande
+// Update order status
 exports.updateOrderStatus = async (req, res) => {
   try {
     const { orderId } = req.params;
@@ -140,7 +140,7 @@ exports.updateOrderStatus = async (req, res) => {
       });
     }
 
-    // Vérifier les permissions
+    // Check permissions
     const isSeller = order.items.some(item => 
       item.seller._id.toString() === userId.toString()
     );
@@ -168,13 +168,13 @@ exports.updateOrderStatus = async (req, res) => {
   }
 };
 
-// Simuler un paiement
+// Simulate payment
 exports.processPayment = async (req, res) => {
   try {
     const { orderId, paymentMethod } = req.body;
     
-    // Simulation de paiement - dans un vrai projet, intégrer Stripe/PayPal
-    const paymentSuccess = Math.random() > 0.1; // 90% de succès
+    // Payment simulation - in a real project, integrate Stripe/PayPal
+    const paymentSuccess = Math.random() > 0.1; // 90% success rate
 
     if (!paymentSuccess) {
       return res.status(400).json({
