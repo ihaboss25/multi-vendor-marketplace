@@ -1,82 +1,72 @@
-import React, { useState } from 'react';
-import { Container, Row, Col, Card, Table, Badge, Button, Tabs, Tab } from 'react-bootstrap';
+import React, { useState, useEffect } from 'react';
+import { Container, Row, Col, Card, Table, Badge, Button, Tabs, Tab, Spinner, Alert } from 'react-bootstrap';
+import { orderService } from '../services/api';
 
 const Orders = ({ sellerView = false }) => {
-  // Données de test pour les commandes
-  const buyerOrders = [
-    {
-      id: 'ORD-001',
-      date: '2024-12-20',
-      status: 'completed',
-      total: 2572.77,
-      items: [
-        { name: 'Laptop Gaming', quantity: 1, price: 1299.99 },
-        { name: 'Smartphone', quantity: 2, price: 799.99 },
-        { name: 'Programming Book', quantity: 3, price: 39.99 },
-      ],
-      shippingAddress: '123 Main St, City, Country'
-    },
-    {
-      id: 'ORD-002',
-      date: '2024-12-18',
-      status: 'pending',
-      total: 159.98,
-      items: [
-        { name: 'T-Shirt', quantity: 2, price: 19.99 },
-        { name: 'Coffee Mug', quantity: 4, price: 12.99 },
-      ],
-      shippingAddress: '456 Oak Ave, Town, Country'
-    },
-    {
-      id: 'ORD-003',
-      date: '2024-12-15',
-      status: 'cancelled',
-      total: 799.99,
-      items: [
-        { name: 'Headphones', quantity: 1, price: 199.99 },
-      ],
-      shippingAddress: '789 Pine Rd, Village, Country'
-    },
-  ];
-
-  const sellerOrders = [
-    {
-      id: 'SORD-001',
-      date: '2024-12-20',
-      buyer: 'John Doe',
-      status: 'completed',
-      total: 1299.99,
-      items: [
-        { name: 'Laptop Gaming', quantity: 1, price: 1299.99 },
-      ],
-      revenue: 1169.99 // After marketplace fee (10%)
-    },
-    {
-      id: 'SORD-002',
-      date: '2024-12-19',
-      buyer: 'Jane Smith',
-      status: 'pending',
-      total: 1599.98,
-      items: [
-        { name: 'Smartphone', quantity: 2, price: 799.99 },
-      ],
-      revenue: 1439.98
-    },
-    {
-      id: 'SORD-003',
-      date: '2024-12-18',
-      buyer: 'Bob Johnson',
-      status: 'completed',
-      total: 119.97,
-      items: [
-        { name: 'Programming Book', quantity: 3, price: 39.99 },
-      ],
-      revenue: 107.97
-    },
-  ];
-
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('all');
-  const orders = sellerView ? sellerOrders : buyerOrders;
+  const [message, setMessage] = useState({ text: '', type: '' });
+
+  useEffect(() => {
+    fetchOrders();
+  }, [sellerView]);
+
+  const fetchOrders = async () => {
+    try {
+      setLoading(true);
+      const response = sellerView 
+        ? await orderService.getSellerOrders()
+        : await orderService.getBuyerOrders();
+      
+      if (response.success) {
+        setOrders(response.orders || []);
+      } else {
+        setError(response.error || 'Failed to load orders');
+      }
+    } catch (err) {
+      setError('Network error. Please try again.');
+      console.error('Error fetching orders:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdateStatus = async (orderId, newStatus) => {
+    try {
+      const response = await fetch(`https://multi-vendor-marketplace-p89x.onrender.com/api/orders/${orderId}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ status: newStatus })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setMessage({ text: `Order ${orderId} marked as ${newStatus}`, type: 'success' });
+        fetchOrders(); // Refresh orders
+      } else {
+        setMessage({ text: data.error || 'Update failed', type: 'danger' });
+      }
+    } catch (err) {
+      setMessage({ text: 'Update failed. Try again.', type: 'danger' });
+    }
+  };
+
+  const handleCancelOrder = async (orderId) => {
+    if (window.confirm('Are you sure you want to cancel this order?')) {
+      await handleUpdateStatus(orderId, 'cancelled');
+    }
+  };
+
+  const handleCompleteOrder = async (orderId) => {
+    if (window.confirm('Mark this order as completed?')) {
+      await handleUpdateStatus(orderId, 'completed');
+    }
+  };
 
   const getStatusBadge = (status) => {
     switch(status) {
@@ -91,8 +81,33 @@ const Orders = ({ sellerView = false }) => {
     ? orders 
     : orders.filter(order => order.status === activeTab);
 
+  if (loading) {
+    return (
+      <Container className="py-5 text-center">
+        <Spinner animation="border" variant="primary" />
+        <p className="mt-3">Loading orders...</p>
+      </Container>
+    );
+  }
+
+  if (error) {
+    return (
+      <Container className="py-5">
+        <Alert variant="danger">
+          Error: {error}
+        </Alert>
+      </Container>
+    );
+  }
+
   return (
     <Container className="py-4">
+      {message.text && (
+        <Alert variant={message.type} onClose={() => setMessage({ text: '', type: '' })} dismissible>
+          {message.text}
+        </Alert>
+      )}
+
       <Row className="mb-4">
         <Col>
           <h1>{sellerView ? '📊 Sales Orders' : '📦 My Orders'}</h1>
@@ -125,7 +140,7 @@ const Orders = ({ sellerView = false }) => {
           <Card className="text-center">
             <Card.Body>
               <Card.Title>
-                ${orders.reduce((sum, order) => sum + order.total, 0).toFixed(2)}
+                ${orders.reduce((sum, order) => sum + order.totalAmount, 0).toFixed(2)}
               </Card.Title>
               <Card.Text>{sellerView ? 'Total Sales' : 'Total Spent'}</Card.Text>
             </Card.Body>
@@ -153,7 +168,7 @@ const Orders = ({ sellerView = false }) => {
         </Col>
       </Row>
 
-      {/* Tabs pour filtrer */}
+      {/* Filter Tabs */}
       <Tabs
         activeKey={activeTab}
         onSelect={(k) => setActiveTab(k)}
@@ -165,7 +180,7 @@ const Orders = ({ sellerView = false }) => {
         <Tab eventKey="cancelled" title="Cancelled" />
       </Tabs>
 
-      {/* Liste des commandes */}
+      {/* Orders List */}
       {filteredOrders.length === 0 ? (
         <Card className="text-center py-5">
           <Card.Body>
@@ -175,8 +190,8 @@ const Orders = ({ sellerView = false }) => {
             <Card.Title>No orders found</Card.Title>
             <Card.Text className="mb-4">
               {sellerView 
-                ? 'You don\'t have any sales yet. Add products to start selling!'
-                : 'You haven\'t placed any orders yet. Start shopping!'}
+                ? "You don't have any sales yet. Add products to start selling!"
+                : "You haven't placed any orders yet. Start shopping!"}
             </Card.Text>
             <Button 
               variant="primary" 
@@ -190,24 +205,24 @@ const Orders = ({ sellerView = false }) => {
       ) : (
         <Row>
           {filteredOrders.map((order) => (
-            <Col key={order.id} md={12} className="mb-4">
+            <Col key={order._id} md={12} className="mb-4">
               <Card>
                 <Card.Body>
                   <div className="d-flex justify-content-between align-items-start mb-3">
                     <div>
-                      <h5 className="mb-1">Order #{order.id}</h5>
+                      <h5 className="mb-1">Order #{order._id.slice(-6)}</h5>
                       <p className="text-muted mb-0">
-                        Date: {order.date}
-                        {sellerView && order.buyer && ` • Buyer: ${order.buyer}`}
+                        Date: {new Date(order.createdAt).toLocaleDateString()}
+                        {sellerView && order.buyer?.name && ` • Buyer: ${order.buyer.name}`}
                       </p>
                     </div>
                     <div className="text-end">
                       {getStatusBadge(order.status)}
-                      <h4 className="mt-2">${order.total.toFixed(2)}</h4>
+                      <h4 className="mt-2">${order.totalAmount.toFixed(2)}</h4>
                     </div>
                   </div>
 
-                  {/* Détails des articles */}
+                  {/* Items Details */}
                   <Table responsive size="sm" className="mb-3">
                     <thead>
                       <tr>
@@ -220,7 +235,7 @@ const Orders = ({ sellerView = false }) => {
                     <tbody>
                       {order.items.map((item, index) => (
                         <tr key={index}>
-                          <td>{item.name}</td>
+                          <td>{item.product?.name || 'Product'}</td>
                           <td className="text-center">{item.quantity}</td>
                           <td className="text-end">${item.price.toFixed(2)}</td>
                           <td className="text-end">
@@ -231,7 +246,7 @@ const Orders = ({ sellerView = false }) => {
                     </tbody>
                   </Table>
 
-                  {/* Informations supplémentaires */}
+                  {/* Additional Info */}
                   <Row className="mt-3">
                     {!sellerView && order.shippingAddress && (
                       <Col md={6}>
@@ -241,36 +256,49 @@ const Orders = ({ sellerView = false }) => {
                         <p className="text-muted mb-0">{order.shippingAddress}</p>
                       </Col>
                     )}
-                    {sellerView && order.revenue && (
+                    {sellerView && (
                       <Col md={6}>
                         <p className="mb-1">
-                          <strong>Your Revenue:</strong>
+                          <strong>Items:</strong>
                         </p>
-                        <p className="text-success fs-5 mb-0">
-                          ${order.revenue.toFixed(2)} 
-                          <small className="text-muted ms-2">
-                            (after 10% marketplace fee)
-                          </small>
+                        <p className="text-muted mb-0">
+                          {order.items.length} item(s) from your store
                         </p>
                       </Col>
                     )}
                     <Col md={6} className="text-end">
                       <div className="d-flex justify-content-end gap-2">
-                        {order.status === 'pending' && (
+                        {order.status === 'pending' && sellerView && (
                           <>
-                            <Button variant="outline-success" size="sm">
+                            <Button 
+                              variant="outline-success" 
+                              size="sm"
+                              onClick={() => handleCompleteOrder(order._id)}
+                            >
                               Mark as Completed
                             </Button>
-                            <Button variant="outline-danger" size="sm">
+                            <Button 
+                              variant="outline-danger" 
+                              size="sm"
+                              onClick={() => handleCancelOrder(order._id)}
+                            >
                               Cancel Order
                             </Button>
                           </>
                         )}
-                        <Button variant="outline-primary" size="sm">
+                        <Button 
+                          variant="outline-primary" 
+                          size="sm"
+                          onClick={() => alert(`Order details for ${order._id}`)}
+                        >
                           View Details
                         </Button>
                         {!sellerView && order.status === 'completed' && (
-                          <Button variant="outline-secondary" size="sm">
+                          <Button 
+                            variant="outline-secondary" 
+                            size="sm"
+                            onClick={() => alert('Review feature coming soon!')}
+                          >
                             Leave Review
                           </Button>
                         )}
