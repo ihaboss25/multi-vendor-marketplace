@@ -16,7 +16,9 @@ router.post('/',
 router.get('/', productController.getAllProducts);
 
 // Get products for logged-in seller - CORRIGÉ
-router.get('/seller/my-products', auth, checkRole(['seller', 'admin']), productController.getMyProducts);
+router.get('/seller/my-products', auth, checkRole(['seller', 'admin']), (req, res) => {
+  res.json({ test: 'Route works', userId: req.userId });
+});
 
 // Get product by ID
 router.get('/:id', productController.getProductById);
