@@ -150,7 +150,7 @@ const Orders = ({ sellerView = false }) => {
           <Card className="text-center">
             <Card.Body>
               <Card.Title>
-                {orders.filter(o => o.status === 'completed').length}
+                {orders.filter(o => o.status === 'completed' || o.status === 'paid').length}
               </Card.Title>
               <Card.Text>Completed</Card.Text>
             </Card.Body>
