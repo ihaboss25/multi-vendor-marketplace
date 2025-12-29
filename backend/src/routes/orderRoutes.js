@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const orderController = require('../controllers/orderController');
+console.log('CancelOrder function:', typeof orderController.cancelOrder);
 const { auth, checkRole } = require('../middleware/auth');
 
 // Créer une commande (checkout) - acheteurs seulement
