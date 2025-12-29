@@ -57,10 +57,29 @@ const Orders = ({ sellerView = false }) => {
   };
 
   const handleCancelOrder = async (orderId) => {
-    if (window.confirm('Are you sure you want to cancel this order?')) {
-      await handleUpdateStatus(orderId, 'cancelled');
+  if (window.confirm('Are you sure you want to cancel this order?')) {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`https://multi-vendor-marketplace-p89x.onrender.com/api/orders/${orderId}/cancel`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        setMessage({ text: 'Order cancelled successfully', type: 'success' });
+        fetchOrders(); // Refresh the list
+      } else {
+        setMessage({ text: data.error || 'Cancellation failed', type: 'danger' });
+      }
+    } catch (err) {
+      setMessage({ text: 'Network error. Please try again.', type: 'danger' });
     }
-  };
+  }
+};
 
   const handleCompleteOrder = async (orderId) => {
     if (window.confirm('Mark this order as completed?')) {
@@ -76,7 +95,7 @@ const Orders = ({ sellerView = false }) => {
       default: return <Badge bg="secondary">{status}</Badge>;
     }
   };
-  
+
   const filteredOrders = activeTab === 'all' 
   ? orders 
   : orders.filter(order => {
