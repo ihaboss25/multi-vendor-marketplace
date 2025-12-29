@@ -205,4 +205,51 @@ exports.processPayment = async (req, res) => {
       error: 'Payment processing failed'
     });
   }
+
+  // Cancel an order (buyer only)
+exports.cancelOrder = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const userId = req.userId;
+    
+    const order = await Order.findById(orderId);
+    
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        error: 'Order not found'
+      });
+    }
+    
+    // Check user is the buyer
+    if (order.buyer.toString() !== userId) {
+      return res.status(403).json({
+        success: false,
+        error: 'Not authorized to cancel this order'
+      });
+    }
+    
+    // Cancel only if pending
+    if (order.status !== 'pending') {
+      return res.status(400).json({
+        success: false,
+        error: 'Only pending orders can be cancelled'
+      });
+    }
+    
+    order.status = 'cancelled';
+    await order.save();
+    
+    res.json({
+      success: true,
+      message: 'Order cancelled successfully',
+      order
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: 'Failed to cancel order'
+    });
+  }
+};
 };

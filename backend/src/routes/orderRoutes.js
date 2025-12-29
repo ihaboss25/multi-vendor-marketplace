@@ -38,4 +38,7 @@ router.put('/:orderId/status',
   orderController.updateOrderStatus
 );
 
+// Cancel an order (buyer only)
+router.put('/:orderId/cancel', auth, orderController.cancelOrder);
+
 module.exports = router;
