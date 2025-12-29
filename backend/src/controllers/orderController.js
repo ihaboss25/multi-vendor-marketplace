@@ -205,6 +205,7 @@ exports.processPayment = async (req, res) => {
       error: 'Payment processing failed'
     });
   }
+  };
 
   // Cancel an order (buyer only)
 exports.cancelOrder = async (req, res) => {
