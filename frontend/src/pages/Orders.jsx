@@ -292,24 +292,25 @@ const Orders = ({ sellerView = false }) => {
                     )}
                     <Col md={6} className="text-end">
                       <div className="d-flex justify-content-end gap-2">
-                        {order.status === 'pending' && sellerView && (
-                          <>
-                            <Button 
-                              variant="outline-success" 
-                              size="sm"
-                              onClick={() => handleCompleteOrder(order._id)}
-                            >
-                              Mark as Completed
-                            </Button>
-                            <Button 
+                         {order.status === 'pending' && sellerView && (
+                             <Button 
+                               variant="outline-success" 
+                                size="sm"
+                               onClick={() => handleCompleteOrder(order._id)}
+                                >
+                               Mark as Completed
+                               </Button>
+                                   )}
+
+                          {order.status === 'pending' && !sellerView && (
+                             <Button 
                               variant="outline-danger" 
-                              size="sm"
-                              onClick={() => handleCancelOrder(order._id)}
-                            >
-                              Cancel Order
-                            </Button>
-                          </>
-                        )}
+                               size="sm"
+                                onClick={() => handleCancelOrder(order._id)}
+                                 >
+                                 Cancel Order
+                                   </Button>
+                                    )}
                         <Button 
                           variant="outline-primary" 
                           size="sm"
