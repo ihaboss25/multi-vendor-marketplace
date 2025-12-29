@@ -119,6 +119,8 @@ console.log('✅ Order ID:', createdOrderId);
 setOrderId(createdOrderId);
 
 console.log('✅ Setting modal to true');
+  // Affiche un message de succès
+     alert('Order placed successfully! Your order ID: ' + orderId);
 
       // 2. Process payment
       const paymentResponse = await orderService.processPayment({
