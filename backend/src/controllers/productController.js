@@ -2,7 +2,7 @@ const Product = require('../models/Product');
 const cloudinary = require('../config/cloudinary');
 const fs = require('fs');
 
-// Créer un produit
+// Create a product
 exports.createProduct = async (req, res) => {
   try {
     console.log('Req body:', req.body);
@@ -18,16 +18,16 @@ exports.createProduct = async (req, res) => {
       });
     }
 
-    // Vérifier si un fichier est uploadé
+    // Check if a file is uploaded
     let imageUrl = '';
     if (req.file) {
       try {
-        // Upload sur Cloudinary
+        // Upload to Cloudinary
         const result = await cloudinary.uploader.upload(req.file.path, {
           folder: 'marketplace'
         });
         imageUrl = result.secure_url;
-        // Supprimer le fichier temporaire
+        // Delete temporary file
         fs.unlinkSync(req.file.path);
       } catch (uploadError) {
         console.error('Cloudinary upload error:', uploadError);
@@ -37,7 +37,7 @@ exports.createProduct = async (req, res) => {
         });
       }
     } else {
-      // URL par défaut
+      // Default placeholder image
       imageUrl = 'https://via.placeholder.com/300x200?text=Marketplace+Product';
     }
 
@@ -54,7 +54,7 @@ exports.createProduct = async (req, res) => {
     await product.save();
     res.status(201).json({
       success: true,
-      message: 'Produit créé avec succès !',
+      message: 'Product created successfully!',
       product
     });
   } catch (error) {
@@ -66,7 +66,7 @@ exports.createProduct = async (req, res) => {
   }
 };
 
-// Récupérer tous les produits
+// Get all products
 exports.getAllProducts = async (req, res) => {
   try {
     const products = await Product.find().populate('seller', 'name email');
@@ -83,14 +83,14 @@ exports.getAllProducts = async (req, res) => {
   }
 };
 
-// Récupérer un produit par ID
+// Get product by ID
 exports.getProductById = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id).populate('seller', 'name email');
     if (!product) {
       return res.status(404).json({
         success: false,
-        error: 'Produit non trouvé'
+        error: 'Product not found'
       });
     }
     res.status(200).json({
@@ -105,22 +105,22 @@ exports.getProductById = async (req, res) => {
   }
 };
 
-// Mettre à jour un produit
+// Update a product
 exports.updateProduct = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
     if (!product) {
       return res.status(404).json({
         success: false,
-        error: 'Produit non trouvé'
+        error: 'Product not found'
       });
     }
 
-    // Vérifier que le vendeur est le propriétaire
+    // Check if seller is the owner
     if (product.seller.toString() !== req.userId && req.userRole !== 'admin') {
       return res.status(403).json({
         success: false,
-        error: 'Accès non autorisé'
+        error: 'Unauthorized access'
       });
     }
 
@@ -132,7 +132,7 @@ exports.updateProduct = async (req, res) => {
     await product.save();
     res.status(200).json({
       success: true,
-      message: 'Produit mis à jour avec succès',
+      message: 'Product updated successfully',
       product
     });
   } catch (error) {
@@ -143,31 +143,50 @@ exports.updateProduct = async (req, res) => {
   }
 };
 
-// Supprimer un produit
+// Delete a product
 exports.deleteProduct = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
     if (!product) {
       return res.status(404).json({
         success: false,
-        error: 'Produit non trouvé'
+        error: 'Product not found'
       });
     }
 
-    // Vérifier que le vendeur est le propriétaire
+    // Check if seller is the owner
     if (product.seller.toString() !== req.userId && req.userRole !== 'admin') {
       return res.status(403).json({
         success: false,
-        error: 'Accès non autorisé'
+        error: 'Unauthorized access'
       });
     }
 
     await product.deleteOne();
     res.status(200).json({
       success: true,
-      message: 'Produit supprimé avec succès'
+      message: 'Product deleted successfully'
     });
   } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+};
+
+// Get products for the logged-in seller
+exports.getMyProducts = async (req, res) => {
+  try {
+    console.log('getMyProducts called, user ID:', req.userId);
+    const products = await Product.find({ seller: req.userId });
+    res.status(200).json({
+      success: true,
+      count: products.length,
+      products
+    });
+  } catch (error) {
+    console.error('Error in getMyProducts:', error);
     res.status(500).json({
       success: false,
       error: error.message
