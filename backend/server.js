@@ -37,6 +37,11 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Route test
+app.get('/api/test', (req, res) => {
+  res.json({ message: 'Backend version: a8056c9' });
+});
+
 // Routes
 app.use('/api/auth', require('./src/routes/authRoutes'));
 app.use('/api/products', require('./src/routes/productRoutes'));
