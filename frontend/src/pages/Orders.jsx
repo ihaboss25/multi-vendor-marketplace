@@ -76,10 +76,15 @@ const Orders = ({ sellerView = false }) => {
       default: return <Badge bg="secondary">{status}</Badge>;
     }
   };
-
+  
   const filteredOrders = activeTab === 'all' 
-    ? orders 
-    : orders.filter(order => order.status === activeTab);
+  ? orders 
+  : orders.filter(order => {
+      if (activeTab === 'completed') {
+        return order.status === 'completed' || order.status === 'paid';
+      }
+      return order.status === activeTab;
+    });  
 
   if (loading) {
     return (
