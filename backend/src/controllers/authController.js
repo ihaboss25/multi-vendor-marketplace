@@ -5,6 +5,13 @@ const jwt = require('jsonwebtoken');
 exports.register = async (req, res) => {
     try {
         const { email, password, name, role } = req.body;
+// Validate password
+    if (!password || password.length < 4) {
+       return res.status(400).json({
+         success: false,
+         error: 'Password must be at least 4 characters'
+       });
+       }
         
         // Check if email already exists
         const existingUser = await User.findOne({ email });
@@ -67,13 +74,8 @@ exports.login = async (req, res) => {
             });
         }
         
-                // Check password
-        const isMatch = await new Promise((resolve, reject) => {
-            user.comparePassword(password, (err, isMatch) => {
-                if (err) reject(err);
-                resolve(isMatch);
-            });
-        });
+         // Check password using async method
+           const isMatch = await user.comparePasswordAsync(password);
         
         // Create JWT token
         const token = jwt.sign(
