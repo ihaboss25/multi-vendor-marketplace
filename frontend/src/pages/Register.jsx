@@ -27,18 +27,13 @@ const Register = () => {
     e.preventDefault();
     setError('');
 
-    if (formData.password !== formData.confirmPassword) {
-      return setError('Passwords do not match');
-    }
-    // Validate password
-    if (password.length < 4) {
-    setError('Password must be at least 4 characters');
-      return;
-    }
-
-    if (formData.password.length < 6) {
-      return setError('Password must be at least 6 characters');
-    }
+  if (formData.password !== formData.confirmPassword) {
+  return setError('Passwords do not match');
+}
+// Validate password
+if (!formData.password || formData.password.length < 4) {
+  return setError('Password must be at least 4 characters');
+}
 
     setLoading(true);
 
