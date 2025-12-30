@@ -30,6 +30,11 @@ const Register = () => {
     if (formData.password !== formData.confirmPassword) {
       return setError('Passwords do not match');
     }
+    // Validate password
+    if (password.length < 4) {
+    setError('Password must be at least 4 characters');
+      return;
+    }
 
     if (formData.password.length < 6) {
       return setError('Password must be at least 6 characters');
@@ -47,10 +52,11 @@ const Register = () => {
 
       const result = await register(userData);
       if (result.success) {
-        navigate('/');
-      } else {
-        setError(result.error || 'Registration failed');
-      }
+      alert('Registration successful! Please login.');
+      navigate('/login'); // Redirige vers login
+    } else {
+      setError(result.error || 'Registration failed');
+    }
     } catch (err) {
       setError('An unexpected error occurred');
     } finally {

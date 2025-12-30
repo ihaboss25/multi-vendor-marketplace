@@ -11,7 +11,7 @@ const Login = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = async (e) => {
+const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
@@ -19,9 +19,10 @@ const Login = () => {
     try {
       const result = await login(email, password);
       if (result.success) {
+        alert('Login successful!');
         navigate('/');
       } else {
-        setError(result.error || 'Login failed. Please check your credentials.');
+        setError(result.error || 'Invalid email or password');
       }
     } catch (err) {
       setError('An unexpected error occurred. Please try again.');
@@ -29,7 +30,7 @@ const Login = () => {
       setLoading(false);
     }
   };
-
+  
   return (
     <Container className="d-flex justify-content-center align-items-center" style={{ minHeight: '80vh' }}>
       <Card style={{ width: '400px' }} className="shadow">
